@@ -1,1 +1,3 @@
-﻿  3260-2.vcxproj -> C:\Users\user\source\repos\3260-2\x64\Debug\3260-2.exe
+﻿  main.cpp
+c:\users\user\source\repos\3260-2\3260-2\main.cpp(390): warning C4267: '引數': 將 'size_t' 轉換為 'GLsizei'，資料可能遺失
+  3260-2.vcxproj -> C:\Users\user\source\repos\3260-2\x64\Debug\3260-2.exe

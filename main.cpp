@@ -295,34 +295,119 @@ GLuint loadTexture(const char* texturePath)
 		exit(1);
 	}
 
-	GLuint textureID = 0;
+	//GLuint textureID = 0;
 	//TODO: Create one OpenGL texture and set the texture parameter 
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	// "Bind" the newly created texture :
+	// to indicate all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	// Give the image to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB,
+		GL_UNSIGNED_BYTE, data);
+	// OpenGL has now copied the data. Free our own version
 
 
 	stbi_image_free(data);
+
 	std::cout << "Load " << texturePath << " successfully!" << std::endl;
+
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+		GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+		GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return textureID;
 }
+
+
+GLuint VAO, VBO, EBO;
+Model obj;
+GLuint Texture0;
 
 void sendDataToOpenGL()
 {
 	//TODO:
 	//Load objects and bind to VAO & VBO
 	//Load texture
+	obj = loadOBJ("resources/floor/floor.obj");
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+	//Create Vertex Buffer Objects
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, obj.vertices.size() * sizeof(Vertex), &obj.vertices[0], GL_STATIC_DRAW);
+	//Create Element array Buffer Objects
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.indices.size() * sizeof(unsigned int), &obj.indices[0], GL_STATIC_DRAW);
+	// 1st attribute buffer : position
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(
+		0, // attribute
+		4, // size
+		GL_FLOAT, // type
+		GL_FALSE, // normalized?
+		sizeof(Vertex), // stride
+		(void*)offsetof(Vertex, uv) // array buffer offset
+	);
 
+	Texture0 = loadTexture("resources/floor/floor_spec.jpg");
+	unsigned int slot = 0;
+	Texture0 = glGetUniformLocation(programID, "myTextureSampler0");
+	glActiveTexture(GL_TEXTURE0 + slot);
+	glBindTexture(GL_TEXTURE_2D, Texture0);
+	glUniform1i(Texture0, 0);
 
 }
 
 void paintGL(void)
 {
+	glClearColor(1.0f, 0.0f, 0.15f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//TODO:
 	//Set lighting information, such as position and color of lighting source
 	//Set transformation matrix
 	//Bind different textures
 
+	//Deph test
+	glClearDepth(1.0f);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_DEPTH_TEST);
+
+	glm::mat4 modelTransformMatrix = glm::mat4(1.0f);
+	glm::mat4 modelRotationMatrix = glm::mat4(1.0f);
+	glm::mat4 modelScalingMatrix = glm::mat4(1.0f);
+
+	//glBindVertexArray(VAO);
+	//glBindTexture(GL_TEXTURE_2D, Texture0);
+	glDrawElements(GL_TRIANGLES, obj.indices.size(), GL_UNSIGNED_INT, 0);
+	
+
+	GLint modelTransformMatrixUniformLocation = glGetUniformLocation(programID, "modelTransformMatrix");
+	GLint modelRotateMatrixUniformLocation = glGetUniformLocation(programID, "modelRotationMatrix");
+	GLint modelScalingMatrixUniformLocation = glGetUniformLocation(programID, "modelScalingMatrix");
+
+	glUniformMatrix4fv(modelTransformMatrixUniformLocation, 1, GL_FALSE, &modelTransformMatrix[0][0]);
+	glUniformMatrix4fv(modelRotateMatrixUniformLocation, 1, GL_FALSE, &modelRotationMatrix[0][0]);
+	glUniformMatrix4fv(modelScalingMatrixUniformLocation, 1, GL_FALSE, &modelScalingMatrix[0][0]);
+
+	glm::mat4 Projection = glm::perspective(30.0f, 1.0f, 2.0f, 20.0f);
+	glm::mat4 Lookat = glm::lookAt(
+		glm::vec3(0, 5.0, 0),
+		glm::vec3(0, 0, -10),
+		glm::vec3(0, -1, 0)
+	);
+	glm::mat4 Tmp = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.5f, -5.0f));;
+	glm::mat4 ProjectionMatrix = Projection * Lookat * Tmp;
+	GLuint MatrixID = glGetUniformLocation(programID, "projectionMatrix");
+	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &ProjectionMatrix[0][0]);
 
 	glFlush();
 	glutPostRedisplay();
@@ -338,6 +423,8 @@ void initializedGL(void) //run only once
 int main(int argc, char* argv[])
 {
 	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
+	glutInitWindowSize(640, 480);
 	glutCreateWindow("Assignment 2");
 
 	//TODO:
@@ -353,7 +440,7 @@ int main(int argc, char* argv[])
 	glutSpecialFunc(special_callback);
 
 	glutMainLoop();
-
+	//system("PAUSE");
 	return 0;
 }
 
