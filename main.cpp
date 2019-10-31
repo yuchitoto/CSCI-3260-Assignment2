@@ -3,8 +3,8 @@ FILE : main.cpp (csci3260 2019-2020 Assignment 2)
 *********************************************************/
 /*********************************************************
 Student Information
-Student ID: 11551110677
-Student Name: Wong Sin Yi
+Student ID: 1155110447
+Student Name: Yu Chi To
 *********************************************************/
 
 #include "Dependencies/glew/glew.h"
@@ -21,6 +21,7 @@ Student Name: Wong Sin Yi
 #include <fstream>
 #include <vector>
 #include <map>
+
 using namespace std;
 
 GLint programID;
@@ -335,7 +336,7 @@ void sendDataToOpenGL()
 	//TODO:
 	//Load objects and bind to VAO & VBO
 	//Load texture
-	obj = loadOBJ("resources/floor/floor.obj");
+	obj = loadOBJ("resources\\floor\\floor.obj");
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 	//Create Vertex Buffer Objects
@@ -351,25 +352,23 @@ void sendDataToOpenGL()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(
 		0, // attribute
-		4, // size
+		3, // size
 		GL_FLOAT, // type
 		GL_FALSE, // normalized?
 		sizeof(Vertex), // stride
-		(void*)offsetof(Vertex, uv) // array buffer offset
+		(void*)offsetof(Vertex, position) // array buffer offset
 	);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
 
-	Texture0 = loadTexture("resources/floor/floor_spec.jpg");
-	unsigned int slot = 0;
-	Texture0 = glGetUniformLocation(programID, "myTextureSampler0");
-	glActiveTexture(GL_TEXTURE0 + slot);
-	glBindTexture(GL_TEXTURE_2D, Texture0);
-	glUniform1i(Texture0, 0);
+	Texture0 = loadTexture("resources\\floor\\floor_spec.jpg");
+
 
 }
 
 void paintGL(void)
 {
-	glClearColor(1.0f, 0.0f, 0.15f, 0.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//TODO:
 	//Set lighting information, such as position and color of lighting source
@@ -385,11 +384,9 @@ void paintGL(void)
 	glm::mat4 modelRotationMatrix = glm::mat4(1.0f);
 	glm::mat4 modelScalingMatrix = glm::mat4(1.0f);
 
-	//glBindVertexArray(VAO);
-	//glBindTexture(GL_TEXTURE_2D, Texture0);
-	glDrawElements(GL_TRIANGLES, obj.indices.size(), GL_UNSIGNED_INT, 0);
 	
-
+	
+	glBindVertexArray(VAO);
 	GLint modelTransformMatrixUniformLocation = glGetUniformLocation(programID, "modelTransformMatrix");
 	GLint modelRotateMatrixUniformLocation = glGetUniformLocation(programID, "modelRotationMatrix");
 	GLint modelScalingMatrixUniformLocation = glGetUniformLocation(programID, "modelScalingMatrix");
@@ -408,6 +405,15 @@ void paintGL(void)
 	glm::mat4 ProjectionMatrix = Projection * Lookat * Tmp;
 	GLuint MatrixID = glGetUniformLocation(programID, "projectionMatrix");
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &ProjectionMatrix[0][0]);
+
+	unsigned int slot = 0;
+	GLuint TexLoc = glGetUniformLocation(programID, "myTextureSampler0");
+	glActiveTexture(GL_TEXTURE0 + slot);
+	glBindTexture(GL_TEXTURE_2D, Texture0);
+	glUniform1i(TexLoc, 0);
+
+	//glBindTexture(GL_TEXTURE_2D, Texture0);
+	glDrawElements(GL_TRIANGLES, obj.indices.size(), GL_UNSIGNED_INT, 0);
 
 	glFlush();
 	glutPostRedisplay();
@@ -434,10 +440,10 @@ int main(int argc, char* argv[])
 	initializedGL();
 	glutDisplayFunc(paintGL);
 
-	glutMouseFunc(mouse_callback);
+	/*glutMouseFunc(mouse_callback);
 	glutMotionFunc(motion_callback);
 	glutKeyboardFunc(keyboard_callback);
-	glutSpecialFunc(special_callback);
+	glutSpecialFunc(special_callback);*/
 
 	glutMainLoop();
 	//system("PAUSE");
