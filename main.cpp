@@ -21,6 +21,8 @@ Student Name: Yu Chi To
 #include <fstream>
 #include <vector>
 #include <map>
+#include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
@@ -501,6 +503,27 @@ void lightrotation(int direction)
 	light_pos[2][1] = -5.0f * sin(current_light_orient);
 	light_pos[3][0] = -5.0f * cos(current_light_orient);
 	light_pos[3][1] = 5.0f * sin(current_light_orient);
+}
+
+void moving_cats(void)
+{
+	srand(time(NULL));
+	glutTimerFunc(300, moving_cat1, rand() % 4);
+	srand(time(NULL)+1);
+	glutTimerFunc(300, moving_cat2, rand() % 4);
+}
+
+//these function should be called using gluttimerfunc of random time and with random movement types as well
+void moving_cat1(int movement_type)
+{
+	//implement 4 basic movements, forward, backward and 2 rotations
+	//additional implementation of jumping action
+}
+
+void moving_cat2(int movement_type)
+{
+	//implement 4 basic movements, forward, backward and 2 rotations
+	//additional implementation of jumping action
 }
 
 void paintGL(void)
