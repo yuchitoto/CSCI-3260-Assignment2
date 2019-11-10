@@ -38,11 +38,13 @@ float current_light_orient = 0.0f;
 
 ofstream log_str;
 
+int rotaion_bool = 1;
+
 int main_cat_tex_ind = 1;
 float main_cat_orient = glm::radians(0.0f);
 float main_cat_pos[3] = { +0.0f, -3.5f, +0.0f };
 
-float lightcoefficient = 1.0f;
+float lightcoefficient = 0.6f;
 
 //a series utilities for setting shader parameters
 void setMat4(const std::string& name, glm::mat4& value)
@@ -189,6 +191,10 @@ void keyboard_callback(unsigned char key, int x, int y)
 	{
 		lightcoefficient += 0.1f;
 		log_str << "light coefficient: " << lightcoefficient << endl;
+	}
+	if (key == 'p')
+	{
+		rotaion_bool = (rotaion_bool == 0) ? 1 : 0;
 	}
 	
 }
@@ -476,16 +482,16 @@ void sendDataToOpenGL()
 
 void lightrotation(int direction)
 {
-	current_light_orient += 0.3 * direction;
+	current_light_orient += 4.5f * direction;
 	current_light_orient = (current_light_orient >= 360.0f) ? current_light_orient - 360.0f : current_light_orient;
-	light_pos[0][0] = 1.0f * cos(current_light_orient);
-	light_pos[0][1] = 1.0f * sin(current_light_orient);
-	light_pos[1][0] = 1.0f * cos(current_light_orient);
-	light_pos[1][1] = -1.0f * sin(current_light_orient);
-	light_pos[2][0] = -1.0f * cos(current_light_orient);
-	light_pos[2][1] = -1.0f * sin(current_light_orient);
-	light_pos[3][0] = -1.0f * cos(current_light_orient);
-	light_pos[3][1] = 1.0f * sin(current_light_orient);
+	light_pos[0][0] = 5.0f * cos(current_light_orient);
+	light_pos[0][1] = 5.0f * sin(current_light_orient);
+	light_pos[1][0] = 5.0f * cos(current_light_orient);
+	light_pos[1][1] = -5.0f * sin(current_light_orient);
+	light_pos[2][0] = -5.0f * cos(current_light_orient);
+	light_pos[2][1] = -5.0f * sin(current_light_orient);
+	light_pos[3][0] = -5.0f * cos(current_light_orient);
+	light_pos[3][1] = 5.0f * sin(current_light_orient);
 }
 
 void paintGL(void)
@@ -506,23 +512,25 @@ void paintGL(void)
 	glm::mat4 modelRotationMatrix = glm::mat4(1.0f);
 	glm::mat4 modelScalingMatrix = glm::mat4(1.0f);
 
-	float cat1pos[2] = { +1.0f, 0.0f };
-	float cat2pos[2] = { -1.0f, 0.0f };
+	float cat1pos[2] = { +5.0f, 0.0f };
+	float cat2pos[2] = { -5.0f, 0.0f };
 	float cutoff = glm::radians(15.0f);
 
 	glm::vec3 ambient_light_color = glm::vec3(+1.0f, +1.0f, +1.0f);
-	glm::vec3 dirlgt = lightcoefficient * glm::vec3(+1.0f, +1.0f, +1.0f);
+	glm::vec3 dirlgt = lightcoefficient * glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec3 dirlgtdir = glm::vec3(0.0f, -1.0f, 0.0f);
 	glm::vec3 pointlight_pos[6];
-	pointlight_pos[0] = glm::vec3(+0.5f, +1.0f, +0.5f);
-	pointlight_pos[1] = glm::vec3(-0.5f, +1.0f, -0.5f);
-	glutTimerFunc(1500, lightrotation, 1);
+	pointlight_pos[0] = glm::vec3(+2.0f, +1.0f, +2.0f);
+	pointlight_pos[1] = glm::vec3(-2.0f, +1.0f, -2.0f);
+
+	if(rotaion_bool)
+		glutTimerFunc(3000, lightrotation, 1);
 	for (int k = 0; k < 4; k++)
 	{
-		pointlight_pos[k + 2] = glm::vec3(light_pos[k][0], +2.0f, light_pos[k][1]);
+		pointlight_pos[k + 2] = glm::vec3(light_pos[k][0], +1.0f, light_pos[k][1]);
 	}
 	glm::vec3 pointlight_color = glm::vec3(1.0f);
-	float pointlight_con[3] = { 0, 0.7f, 1.0f };
+	float pointlight_con[3] = { 1.0, 0.5f, 0.05f };
 	
 	glm::vec3 spotlight_pos[3];
 
@@ -532,7 +540,7 @@ void paintGL(void)
 	glm::vec3 specular;
 
 	glm::vec3 main_cat_spotlight_dir = glm::vec3(0.0f, -1.0f, 0.0f);
-	glm::vec3 main_cat_spotlight_pos = glm::vec3(main_cat_pos[0], +1.3f, main_cat_pos[2]);
+	glm::vec3 main_cat_spotlight_pos = glm::vec3(main_cat_pos[0], +1.0f, main_cat_pos[2]);
 	glm::vec3 cat_sl_pos[2] = { glm::vec3(cat1pos[0], +1.3f, cat1pos[1]), glm::vec3(cat2pos[0], +1.3f, cat2pos[1]) };
 
 	//floor
@@ -625,7 +633,7 @@ void paintGL(void)
 	shininess = 32.0f;
 	ambient = glm::vec3(0.3f);
 	diffuse = glm::vec3(1.0f);
-	specular = glm::vec3(0.7f);
+	specular = glm::vec3(1.0f);
 
 	unsigned int slot = 0;
 	GLuint TexLoc = glGetUniformLocation(programID, "myTextureSampler0");
@@ -689,6 +697,8 @@ void paintGL(void)
 	glUniform1f(sptlt0cutoff_loc, cutoff);
 	glUniform1f(sptlt1cutoff_loc, cutoff);
 	glUniform1f(sptlt2cutoff_loc, cutoff);
+	glUniform3fv(dlt_loc, 1, &dirlgt[0]);
+	glUniform3fv(dltdir_loc, 1, &dirlgtdir[0]);
 
 	//glBindTexture(GL_TEXTURE_2D, Texture0);
 	glDrawElements(GL_TRIANGLES, floor1.indices.size(), GL_UNSIGNED_INT, 0);
@@ -769,6 +779,8 @@ void paintGL(void)
 	glUniform1f(sptlt0cutoff_loc, cutoff);
 	glUniform1f(sptlt1cutoff_loc, cutoff);
 	glUniform1f(sptlt2cutoff_loc, cutoff);
+	glUniform3fv(dlt_loc, 1, &dirlgt[0]);
+	glUniform3fv(dltdir_loc, 1, &dirlgtdir[0]);
 
 
 	glDrawElements(GL_TRIANGLES, cat[0].indices.size(), GL_UNSIGNED_INT, 0);
@@ -845,6 +857,8 @@ void paintGL(void)
 	glUniform1f(sptlt0cutoff_loc, cutoff);
 	glUniform1f(sptlt1cutoff_loc, cutoff);
 	glUniform1f(sptlt2cutoff_loc, cutoff);
+	glUniform3fv(dlt_loc, 1, &dirlgt[0]);
+	glUniform3fv(dltdir_loc, 1, &dirlgtdir[0]);
 
 	glDrawElements(GL_TRIANGLES, cat[1].indices.size(), GL_UNSIGNED_INT, 0);
 
@@ -920,6 +934,8 @@ void paintGL(void)
 	glUniform1f(sptlt0cutoff_loc, cutoff);
 	glUniform1f(sptlt1cutoff_loc, cutoff);
 	glUniform1f(sptlt2cutoff_loc, cutoff);
+	glUniform3fv(dlt_loc, 1, &dirlgt[0]);
+	glUniform3fv(dltdir_loc, 1, &dirlgtdir[0]);
 
 	glDrawElements(GL_TRIANGLES, cat[2].indices.size(), GL_UNSIGNED_INT, 0);
 
