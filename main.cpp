@@ -520,8 +520,8 @@ void paintGL(void)
 	glm::vec3 dirlgt = lightcoefficient * glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec3 dirlgtdir = glm::vec3(0.0f, -1.0f, 0.0f);
 	glm::vec3 pointlight_pos[6];
-	pointlight_pos[0] = glm::vec3(+2.0f, +1.0f, +2.0f);
-	pointlight_pos[1] = glm::vec3(-2.0f, +1.0f, -2.0f);
+	pointlight_pos[0] = glm::vec3(+10.0f, +1.0f, +10.0f);
+	pointlight_pos[1] = glm::vec3(-10.0f, +1.0f, -10.0f);
 
 	if(rotaion_bool)
 		glutTimerFunc(3000, lightrotation, 1);
