@@ -477,11 +477,17 @@ void paintGL(void)
 	glm::mat4 modelTransformMatrix = glm::mat4(1.0f);
 	glm::mat4 modelRotationMatrix = glm::mat4(1.0f);
 	glm::mat4 modelScalingMatrix = glm::mat4(1.0f);
+
 	glm::vec3 ambient_light_color = glm::vec3(+1.0f, +1.0f, +1.0f);
 	glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec3 light_pos = glm::vec3(main_cat_pos[0], +1.0f, main_cat_pos[2]);
 
+	glm::vec3 ambient = glm::vec3(0.3f);
+	float shininess;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
 
+	//floor
 	glBindVertexArray(VAO);
 	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(+0.0f, -0.5f, +0.0f));
 	modelRotationMatrix = glm::mat4(1.0f);
@@ -499,8 +505,9 @@ void paintGL(void)
 	cam_x = 20.0f * sin(cos(glm::radians(cam_yaw))) * cos(glm::radians(cam_pitch));
 	cam_y = 20.0f * sin(glm::radians(cam_pitch));
 	cam_z = -20.0f * cos(glm::radians(cam_pitch)) * sin(glm::radians(cam_yaw));
+	glm::vec3 viewPos = glm::vec3(cam_x, cam_y, cam_z);
 
-	glm::mat4 Lookat = glm::lookAt(glm::vec3(cam_x, cam_y, cam_z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+	glm::mat4 Lookat = glm::lookAt(viewPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
 	glm::mat4 Tmp = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, -5.0f));
 	glm::mat4 ProjectionMatrix = Projection * Lookat * Tmp;
 
@@ -508,16 +515,32 @@ void paintGL(void)
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &ProjectionMatrix[0][0]);
 
 	GLint ambient_light_loc = glGetUniformLocation(programID, "light_amb");
+	GLint k_ambient_loc = glGetUniformLocation(programID, "k_ambient");
 	GLint light_loc = glGetUniformLocation(programID, "light_pos");
 	GLint light_color_loc = glGetUniformLocation(programID, "light_color");
+	GLint viewPos_loc = glGetUniformLocation(programID, "viewPos");
+	GLint shininess_loc = glGetUniformLocation(programID, "shininess");
+	GLint k_diffuse_loc = glGetUniformLocation(programID, "k_diffuse");
+	GLint k_spec_loc = glGetUniformLocation(programID, "k_specular");
+
+	shininess = 32.0f;
+	ambient = glm::vec3(0.7f);
+	diffuse = glm::vec3(1.0f);
+	specular = glm::vec3(0.7f);
+
 	unsigned int slot = 0;
 	GLuint TexLoc = glGetUniformLocation(programID, "myTextureSampler0");
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(GL_TEXTURE_2D, Texture0);
 	glUniform1i(TexLoc, 0);
 	glUniform3fv(ambient_light_loc, 1, &ambient_light_color[0]);
+	glUniform3fv(k_ambient_loc, 1, &ambient[0]);
 	glUniform3fv(light_loc, 1, &light_pos[0]);
 	glUniform3fv(light_color_loc, 1, &light_color[0]);
+	glUniform3fv(viewPos_loc, 1, &viewPos[0]);
+	glUniform1f(shininess_loc, shininess);
+	glUniform3fv(k_diffuse_loc, 1, &diffuse[0]);
+	glUniform3fv(k_spec_loc, 1, &specular[0]);
 
 	//glBindTexture(GL_TEXTURE_2D, Texture0);
 	glDrawElements(GL_TRIANGLES, floor1.indices.size(), GL_UNSIGNED_INT, 0);
@@ -532,13 +555,23 @@ void paintGL(void)
 	glUniformMatrix4fv(modelScalingMatrixUniformLocation, 1, GL_FALSE, &modelScalingMatrix[0][0]);
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &ProjectionMatrix[0][0]);
 
+	shininess = 4.0f;
+	ambient = glm::vec3(0.3f);
+	diffuse = glm::vec3(1.0f);
+	specular = glm::vec3(0.5f);
+
 	slot = 0;
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(GL_TEXTURE_2D, (main_cat_tex_ind == 1) ? catTex[0] : altcatTex[0]);
 	glUniform1i(TexLoc, 0);
 	glUniform3fv(ambient_light_loc, 1, &ambient_light_color[0]);
+	glUniform3fv(k_ambient_loc, 1, &ambient[0]);
 	glUniform3fv(light_loc, 1, &light_pos[0]);
 	glUniform3fv(light_color_loc, 1, &light_color[0]);
+	glUniform3fv(viewPos_loc, 1, &viewPos[0]);
+	glUniform1f(shininess_loc, shininess);
+	glUniform3fv(k_diffuse_loc, 1, &diffuse[0]);
+	glUniform3fv(k_spec_loc, 1, &specular[0]);
 
 	glDrawElements(GL_TRIANGLES, cat[0].indices.size(), GL_UNSIGNED_INT, 0);
 

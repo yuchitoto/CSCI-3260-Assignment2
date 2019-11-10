@@ -3,6 +3,7 @@
 in layout(location=0) vec3 position;
 in layout(location=1) vec2 vertexUV;
 in layout(location = 2) vec3 obj_normal;
+
 out vec2 UV;
 out vec3 fragPos;
 out vec3 normal;
