@@ -556,7 +556,7 @@ void paintGL(void)
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &ProjectionMatrix[0][0]);
 
 	shininess = 4.0f;
-	ambient = glm::vec3(0.3f);
+	ambient = glm::vec3(0.7f);
 	diffuse = glm::vec3(1.0f);
 	specular = glm::vec3(0.5f);
 
