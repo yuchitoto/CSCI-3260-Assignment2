@@ -30,15 +30,19 @@ GLint programID;
 constexpr float STEP = 0.1f;
 
 int current_x, current_y;
-float radius = 10.0f;
 float cam_x, cam_y, cam_z;
 float cam_yaw = -90.0f, cam_pitch = 13.0f;
+
+float light_pos[4][2];
+float current_light_orient = 0.0f;
 
 ofstream log_str;
 
 int main_cat_tex_ind = 1;
 float main_cat_orient = glm::radians(0.0f);
 float main_cat_pos[3] = { +0.0f, -3.5f, +0.0f };
+
+float lightcoefficient = 1.0f;
 
 //a series utilities for setting shader parameters
 void setMat4(const std::string& name, glm::mat4& value)
@@ -175,6 +179,16 @@ void keyboard_callback(unsigned char key, int x, int y)
 	if (key == '2')
 	{
 		main_cat_tex_ind = 2;
+	}
+	if (key == 's')
+	{
+		lightcoefficient -=  (lightcoefficient > 0.0) ? 0.1f : 0.0f;
+		log_str << "light coefficient: " << lightcoefficient << endl;
+	}
+	if (key == 'w')
+	{
+		lightcoefficient += 0.1f;
+		log_str << "light coefficient: " << lightcoefficient << endl;
 	}
 	
 }
@@ -427,7 +441,7 @@ void initCat(void)
 	const char* tex_file_path[4] = {"resources\\cat\\cat_01.jpg", "resources\\cat1\\Cat_diffuse.jpg", "resources\\cat2\\Cat_diffuse.jpg", "resources\\pallas cat\\Pallas_Cat_dif.jpg"};
 	const char* alt_tex_file_path[4] = {"resources\\cat\\cat_02.jpg", "resources\\cat1\\Cat_bump.jpg", "resources\\cat2\\Cat_bump.jpg", "resources\\pallas cat\\Pallas_Cat_dif.jpg" };
 
-	for (int h = 0; h < 1; h++)//change if add cats
+	for (int h = 0; h < 3; h++)//change if add cats
 	{
 		cat[h] = loadOBJ(obj_file_path[h]);
 
@@ -460,6 +474,20 @@ void sendDataToOpenGL()
 	initCat();
 }
 
+void lightrotation(int direction)
+{
+	current_light_orient += 0.3 * direction;
+	current_light_orient = (current_light_orient >= 360.0f) ? current_light_orient - 360.0f : current_light_orient;
+	light_pos[0][0] = 1.0f * cos(current_light_orient);
+	light_pos[0][1] = 1.0f * sin(current_light_orient);
+	light_pos[1][0] = 1.0f * cos(current_light_orient);
+	light_pos[1][1] = -1.0f * sin(current_light_orient);
+	light_pos[2][0] = -1.0f * cos(current_light_orient);
+	light_pos[2][1] = -1.0f * sin(current_light_orient);
+	light_pos[3][0] = -1.0f * cos(current_light_orient);
+	light_pos[3][1] = 1.0f * sin(current_light_orient);
+}
+
 void paintGL(void)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -478,20 +506,40 @@ void paintGL(void)
 	glm::mat4 modelRotationMatrix = glm::mat4(1.0f);
 	glm::mat4 modelScalingMatrix = glm::mat4(1.0f);
 
-	glm::vec3 ambient_light_color = glm::vec3(+1.0f, +1.0f, +1.0f);
-	glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
-	glm::vec3 light_pos = glm::vec3(main_cat_pos[0], +1.0f, main_cat_pos[2]);
+	float cat1pos[2] = { +1.0f, 0.0f };
+	float cat2pos[2] = { -1.0f, 0.0f };
+	float cutoff = glm::radians(15.0f);
 
-	glm::vec3 ambient = glm::vec3(0.3f);
+	glm::vec3 ambient_light_color = glm::vec3(+1.0f, +1.0f, +1.0f);
+	glm::vec3 dirlgt = lightcoefficient * glm::vec3(+1.0f, +1.0f, +1.0f);
+	glm::vec3 dirlgtdir = glm::vec3(0.0f, -1.0f, 0.0f);
+	glm::vec3 pointlight_pos[6];
+	pointlight_pos[0] = glm::vec3(+0.5f, +1.0f, +0.5f);
+	pointlight_pos[1] = glm::vec3(-0.5f, +1.0f, -0.5f);
+	glutTimerFunc(1500, lightrotation, 1);
+	for (int k = 0; k < 4; k++)
+	{
+		pointlight_pos[k + 2] = glm::vec3(light_pos[k][0], +2.0f, light_pos[k][1]);
+	}
+	glm::vec3 pointlight_color = glm::vec3(1.0f);
+	float pointlight_con[3] = { 0, 0.7f, 1.0f };
+	
+	glm::vec3 spotlight_pos[3];
+
+	glm::vec3 ambient = glm::vec3(0.1f);
 	float shininess;
 	glm::vec3 diffuse;
 	glm::vec3 specular;
+
+	glm::vec3 main_cat_spotlight_dir = glm::vec3(0.0f, -1.0f, 0.0f);
+	glm::vec3 main_cat_spotlight_pos = glm::vec3(main_cat_pos[0], +1.3f, main_cat_pos[2]);
+	glm::vec3 cat_sl_pos[2] = { glm::vec3(cat1pos[0], +1.3f, cat1pos[1]), glm::vec3(cat2pos[0], +1.3f, cat2pos[1]) };
 
 	//floor
 	glBindVertexArray(VAO);
 	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(+0.0f, -0.5f, +0.0f));
 	modelRotationMatrix = glm::mat4(1.0f);
-	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+3.0f, +3.0f, +3.0f));
+	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+4.0f, +4.0f, +4.0f));
 	GLint modelTransformMatrixUniformLocation = glGetUniformLocation(programID, "modelTransformMatrix");
 	GLint modelRotateMatrixUniformLocation = glGetUniformLocation(programID, "modelRotationMatrix");
 	GLint modelScalingMatrixUniformLocation = glGetUniformLocation(programID, "modelScalingMatrix");
@@ -515,16 +563,67 @@ void paintGL(void)
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &ProjectionMatrix[0][0]);
 
 	GLint ambient_light_loc = glGetUniformLocation(programID, "light_amb");
-	GLint k_ambient_loc = glGetUniformLocation(programID, "k_ambient");
-	GLint light_loc = glGetUniformLocation(programID, "light_pos");
-	GLint light_color_loc = glGetUniformLocation(programID, "light_color");
+	GLint k_ambient_loc = glGetUniformLocation(programID, "material.ambient");
 	GLint viewPos_loc = glGetUniformLocation(programID, "viewPos");
-	GLint shininess_loc = glGetUniformLocation(programID, "shininess");
-	GLint k_diffuse_loc = glGetUniformLocation(programID, "k_diffuse");
-	GLint k_spec_loc = glGetUniformLocation(programID, "k_specular");
+	GLint shininess_loc = glGetUniformLocation(programID, "material.shininess");
+	GLint k_diffuse_loc = glGetUniformLocation(programID, "material.diffuse");
+	GLint k_spec_loc = glGetUniformLocation(programID, "material.specular");
+	GLint dlt_loc = glGetUniformLocation(programID, "directional_light.color");
+	GLint dltdir_loc = glGetUniformLocation(programID, "directional_light.dir");
+	GLint sptlt0light_color_loc = glGetUniformLocation(programID, "sptlt[0].light.color");
+	GLint sptlt0light_pos_loc = glGetUniformLocation(programID, "sptlt[0].light.pos");
+	GLint sptlt0light_con_loc = glGetUniformLocation(programID, "sptlt[0].light.con");
+	GLint sptlt0light_lin_loc = glGetUniformLocation(programID, "sptlt[0].light.lin");
+	GLint sptlt0light_quad_loc = glGetUniformLocation(programID, "sptlt[0].light.quad");
+	GLint sptlt0dir_loc = glGetUniformLocation(programID, "sptlt[0].dir");
+	GLint sptlt1light_color_loc = glGetUniformLocation(programID, "sptlt[1].light.color");
+	GLint sptlt1light_pos_loc = glGetUniformLocation(programID, "sptlt[1].light.pos");
+	GLint sptlt1light_con_loc = glGetUniformLocation(programID, "sptlt[1].light.con");
+	GLint sptlt1light_lin_loc = glGetUniformLocation(programID, "sptlt[1].light.lin");
+	GLint sptlt1light_quad_loc = glGetUniformLocation(programID, "sptlt[1].light.quad");
+	GLint sptlt1dir_loc = glGetUniformLocation(programID, "sptlt[1].dir");
+	GLint sptlt2light_color_loc = glGetUniformLocation(programID, "sptlt[2].light.color");
+	GLint sptlt2light_pos_loc = glGetUniformLocation(programID, "sptlt[2].light.pos");
+	GLint sptlt2light_con_loc = glGetUniformLocation(programID, "sptlt[2].light.con");
+	GLint sptlt2light_lin_loc = glGetUniformLocation(programID, "sptlt[2].light.lin");
+	GLint sptlt2light_quad_loc = glGetUniformLocation(programID, "sptlt[2].light.quad");
+	GLint sptlt2dir_loc = glGetUniformLocation(programID, "sptlt[2].dir");
+	GLint ptlt0color_loc = glGetUniformLocation(programID, "ptlt[0].color");
+	GLint ptlt0pos_loc = glGetUniformLocation(programID, "ptlt[0].pos");
+	GLint ptlt0con_loc = glGetUniformLocation(programID, "ptlt[0].con");
+	GLint ptlt0lin_loc = glGetUniformLocation(programID, "ptlt[0].lin");
+	GLint ptlt0quad_loc = glGetUniformLocation(programID, "ptlt[0].quad");
+	GLint ptlt1color_loc = glGetUniformLocation(programID, "ptlt[1].color");
+	GLint ptlt1pos_loc = glGetUniformLocation(programID, "ptlt[1].pos");
+	GLint ptlt1con_loc = glGetUniformLocation(programID, "ptlt[1].con");
+	GLint ptlt1lin_loc = glGetUniformLocation(programID, "ptlt[1].lin");
+	GLint ptlt1quad_loc = glGetUniformLocation(programID, "ptlt[1].quad");
+	GLint ptlt2color_loc = glGetUniformLocation(programID, "ptlt[2].color");
+	GLint ptlt2pos_loc = glGetUniformLocation(programID, "ptlt[2].pos");
+	GLint ptlt2con_loc = glGetUniformLocation(programID, "ptlt[2].con");
+	GLint ptlt2lin_loc = glGetUniformLocation(programID, "ptlt[2].lin");
+	GLint ptlt2quad_loc = glGetUniformLocation(programID, "ptlt[2].quad");
+	GLint ptlt3color_loc = glGetUniformLocation(programID, "ptlt[3].color");
+	GLint ptlt3pos_loc = glGetUniformLocation(programID, "ptlt[3].pos");
+	GLint ptlt3con_loc = glGetUniformLocation(programID, "ptlt[3].con");
+	GLint ptlt3lin_loc = glGetUniformLocation(programID, "ptlt[3].lin");
+	GLint ptlt3quad_loc = glGetUniformLocation(programID, "ptlt[3].quad");
+	GLint ptlt4color_loc = glGetUniformLocation(programID, "ptlt[4].color");
+	GLint ptlt4pos_loc = glGetUniformLocation(programID, "ptlt[4].pos");
+	GLint ptlt4con_loc = glGetUniformLocation(programID, "ptlt[4].con");
+	GLint ptlt4lin_loc = glGetUniformLocation(programID, "ptlt[4].lin");
+	GLint ptlt4quad_loc = glGetUniformLocation(programID, "ptlt[4].quad");
+	GLint ptlt5color_loc = glGetUniformLocation(programID, "ptlt[5].color");
+	GLint ptlt5pos_loc = glGetUniformLocation(programID, "ptlt[5].pos");
+	GLint ptlt5con_loc = glGetUniformLocation(programID, "ptlt[5].con");
+	GLint ptlt5lin_loc = glGetUniformLocation(programID, "ptlt[5].lin");
+	GLint ptlt5quad_loc = glGetUniformLocation(programID, "ptlt[5].quad");
+	GLint sptlt0cutoff_loc = glGetUniformLocation(programID, "sptlt[0].cutoff");
+	GLint sptlt1cutoff_loc = glGetUniformLocation(programID, "sptlt[1].cutoff");
+	GLint sptlt2cutoff_loc = glGetUniformLocation(programID, "sptlt[2].cutoff");
 
 	shininess = 32.0f;
-	ambient = glm::vec3(0.7f);
+	ambient = glm::vec3(0.3f);
 	diffuse = glm::vec3(1.0f);
 	specular = glm::vec3(0.7f);
 
@@ -535,12 +634,61 @@ void paintGL(void)
 	glUniform1i(TexLoc, 0);
 	glUniform3fv(ambient_light_loc, 1, &ambient_light_color[0]);
 	glUniform3fv(k_ambient_loc, 1, &ambient[0]);
-	glUniform3fv(light_loc, 1, &light_pos[0]);
-	glUniform3fv(light_color_loc, 1, &light_color[0]);
 	glUniform3fv(viewPos_loc, 1, &viewPos[0]);
 	glUniform1f(shininess_loc, shininess);
 	glUniform3fv(k_diffuse_loc, 1, &diffuse[0]);
 	glUniform3fv(k_spec_loc, 1, &specular[0]);
+	glUniform3fv(ptlt0pos_loc, 1, &pointlight_pos[0][0]);
+	glUniform3fv(ptlt2pos_loc, 1, &pointlight_pos[2][0]);
+	glUniform3fv(ptlt5pos_loc, 1, &pointlight_pos[5][0]);
+	glUniform3fv(ptlt0color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt0con_loc, pointlight_con[0]);
+	glUniform1f(ptlt0lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt0quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt2color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt2con_loc, pointlight_con[0]);
+	glUniform1f(ptlt2lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt2quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt5color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt5con_loc, pointlight_con[0]);
+	glUniform1f(ptlt5lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt5quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt3pos_loc, 1, &pointlight_pos[3][0]);
+	glUniform3fv(ptlt1pos_loc, 1, &pointlight_pos[1][0]);
+	glUniform3fv(ptlt3color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt3con_loc, pointlight_con[0]);
+	glUniform1f(ptlt3lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt3quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt1color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt1con_loc, pointlight_con[0]);
+	glUniform1f(ptlt1lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt1quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt4pos_loc, 1, &pointlight_pos[4][0]);
+	glUniform3fv(ptlt4color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt4con_loc, pointlight_con[0]);
+	glUniform1f(ptlt4lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
+	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform1f(sptlt0light_con_loc, 0.3f);
+	glUniform1f(sptlt0light_lin_loc, 0.7f);
+	glUniform1f(sptlt0light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_con_loc, 0.3f);
+	glUniform1f(sptlt1light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_con_loc, 0.3f);
+	glUniform1f(sptlt2light_quad_loc, 0.7f);
+	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
+	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
+	glUniform1f(sptlt0cutoff_loc, cutoff);
+	glUniform1f(sptlt1cutoff_loc, cutoff);
+	glUniform1f(sptlt2cutoff_loc, cutoff);
 
 	//glBindTexture(GL_TEXTURE_2D, Texture0);
 	glDrawElements(GL_TRIANGLES, floor1.indices.size(), GL_UNSIGNED_INT, 0);
@@ -566,19 +714,69 @@ void paintGL(void)
 	glUniform1i(TexLoc, 0);
 	glUniform3fv(ambient_light_loc, 1, &ambient_light_color[0]);
 	glUniform3fv(k_ambient_loc, 1, &ambient[0]);
-	glUniform3fv(light_loc, 1, &light_pos[0]);
-	glUniform3fv(light_color_loc, 1, &light_color[0]);
 	glUniform3fv(viewPos_loc, 1, &viewPos[0]);
 	glUniform1f(shininess_loc, shininess);
 	glUniform3fv(k_diffuse_loc, 1, &diffuse[0]);
 	glUniform3fv(k_spec_loc, 1, &specular[0]);
+	glUniform3fv(ptlt0pos_loc, 1, &pointlight_pos[0][0]);
+	glUniform3fv(ptlt2pos_loc, 1, &pointlight_pos[2][0]);
+	glUniform3fv(ptlt5pos_loc, 1, &pointlight_pos[5][0]);
+	glUniform3fv(ptlt0color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt0con_loc, pointlight_con[0]);
+	glUniform1f(ptlt0lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt0quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt2color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt2con_loc, pointlight_con[0]);
+	glUniform1f(ptlt2lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt2quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt5color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt5con_loc, pointlight_con[0]);
+	glUniform1f(ptlt5lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt5quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt3pos_loc, 1, &pointlight_pos[3][0]);
+	glUniform3fv(ptlt1pos_loc, 1, &pointlight_pos[1][0]);
+	glUniform3fv(ptlt3color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt3con_loc, pointlight_con[0]);
+	glUniform1f(ptlt3lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt3quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt1color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt1con_loc, pointlight_con[0]);
+	glUniform1f(ptlt1lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt1quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt4pos_loc, 1, &pointlight_pos[4][0]);
+	glUniform3fv(ptlt4color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt4con_loc, pointlight_con[0]);
+	glUniform1f(ptlt4lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
+	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform1f(sptlt0light_con_loc, 0.3f);
+	glUniform1f(sptlt0light_lin_loc, 0.7f);
+	glUniform1f(sptlt0light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_con_loc, 0.3f);
+	glUniform1f(sptlt1light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_con_loc, 0.3f);
+	glUniform1f(sptlt2light_quad_loc, 0.7f);
+	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
+	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
+	glUniform1f(sptlt0cutoff_loc, cutoff);
+	glUniform1f(sptlt1cutoff_loc, cutoff);
+	glUniform1f(sptlt2cutoff_loc, cutoff);
+
 
 	glDrawElements(GL_TRIANGLES, cat[0].indices.size(), GL_UNSIGNED_INT, 0);
 
-	/*//cat1
+	//cat1
 	glBindVertexArray(catVAO[1]);
-	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(+1.0f, +0.0f, +1.0f));
-	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.05f, +0.05f, +0.05f));
+	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(cat1pos[0], -3.5f, cat1pos[1]));
+	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.15f, +0.15f, +0.15f));
 	modelRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(-1.0f, +0.0f, +0.0f));
 	glUniformMatrix4fv(modelTransformMatrixUniformLocation, 1, GL_FALSE, &modelTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelRotateMatrixUniformLocation, 1, GL_FALSE, &modelRotationMatrix[0][0]);
@@ -590,12 +788,70 @@ void paintGL(void)
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(GL_TEXTURE_2D, catTex[1]);
 	glUniform1i(TexLoc, 0);
+	glUniform3fv(ambient_light_loc, 1, &ambient_light_color[0]);
+	glUniform3fv(k_ambient_loc, 1, &ambient[0]);
+	glUniform3fv(viewPos_loc, 1, &viewPos[0]);
+	glUniform1f(shininess_loc, shininess);
+	glUniform3fv(k_diffuse_loc, 1, &diffuse[0]);
+	glUniform3fv(k_spec_loc, 1, &specular[0]);
+	glUniform3fv(ptlt0pos_loc, 1, &pointlight_pos[0][0]);
+	glUniform3fv(ptlt2pos_loc, 1, &pointlight_pos[2][0]);
+	glUniform3fv(ptlt5pos_loc, 1, &pointlight_pos[5][0]);
+	glUniform3fv(ptlt0color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt0con_loc, pointlight_con[0]);
+	glUniform1f(ptlt0lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt0quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt2color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt2con_loc, pointlight_con[0]);
+	glUniform1f(ptlt2lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt2quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt5color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt5con_loc, pointlight_con[0]);
+	glUniform1f(ptlt5lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt5quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt3pos_loc, 1, &pointlight_pos[3][0]);
+	glUniform3fv(ptlt1pos_loc, 1, &pointlight_pos[1][0]);
+	glUniform3fv(ptlt3color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt3con_loc, pointlight_con[0]);
+	glUniform1f(ptlt3lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt3quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt1color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt1con_loc, pointlight_con[0]);
+	glUniform1f(ptlt1lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt1quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt4pos_loc, 1, &pointlight_pos[4][0]);
+	glUniform3fv(ptlt4color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt4con_loc, pointlight_con[0]);
+	glUniform1f(ptlt4lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
+	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform1f(sptlt0light_con_loc, 0.3f);
+	glUniform1f(sptlt0light_lin_loc, 0.7f);
+	glUniform1f(sptlt0light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_con_loc, 0.3f);
+	glUniform1f(sptlt1light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_con_loc, 0.3f);
+	glUniform1f(sptlt2light_quad_loc, 0.7f);
+	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
+	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
+	glUniform1f(sptlt0cutoff_loc, cutoff);
+	glUniform1f(sptlt1cutoff_loc, cutoff);
+	glUniform1f(sptlt2cutoff_loc, cutoff);
+
 	glDrawElements(GL_TRIANGLES, cat[1].indices.size(), GL_UNSIGNED_INT, 0);
 
 	//cat2
 	glBindVertexArray(catVAO[2]);
-	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, +0.0f, +1.0f));
-	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.05f, +0.05f, +0.05f));
+	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(cat2pos[0], -3.5f, cat2pos[1]));
+	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.15f, +0.15f, +0.15f));
 	modelRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(-1.0f, +0.0f, +0.0f));
 	glUniformMatrix4fv(modelTransformMatrixUniformLocation, 1, GL_FALSE, &modelTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelRotateMatrixUniformLocation, 1, GL_FALSE, &modelRotationMatrix[0][0]);
@@ -607,9 +863,67 @@ void paintGL(void)
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(GL_TEXTURE_2D, catTex[2]);
 	glUniform1i(TexLoc, 0);
+	glUniform3fv(ambient_light_loc, 1, &ambient_light_color[0]);
+	glUniform3fv(k_ambient_loc, 1, &ambient[0]);
+	glUniform3fv(viewPos_loc, 1, &viewPos[0]);
+	glUniform1f(shininess_loc, shininess);
+	glUniform3fv(k_diffuse_loc, 1, &diffuse[0]);
+	glUniform3fv(k_spec_loc, 1, &specular[0]);
+	glUniform3fv(ptlt0pos_loc, 1, &pointlight_pos[0][0]);
+	glUniform3fv(ptlt2pos_loc, 1, &pointlight_pos[2][0]);
+	glUniform3fv(ptlt5pos_loc, 1, &pointlight_pos[5][0]);
+	glUniform3fv(ptlt0color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt0con_loc, pointlight_con[0]);
+	glUniform1f(ptlt0lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt0quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt2color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt2con_loc, pointlight_con[0]);
+	glUniform1f(ptlt2lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt2quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt5color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt5con_loc, pointlight_con[0]);
+	glUniform1f(ptlt5lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt5quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt3pos_loc, 1, &pointlight_pos[3][0]);
+	glUniform3fv(ptlt1pos_loc, 1, &pointlight_pos[1][0]);
+	glUniform3fv(ptlt3color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt3con_loc, pointlight_con[0]);
+	glUniform1f(ptlt3lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt3quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt1color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt1con_loc, pointlight_con[0]);
+	glUniform1f(ptlt1lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt1quad_loc, pointlight_con[2]);
+	glUniform3fv(ptlt4pos_loc, 1, &pointlight_pos[4][0]);
+	glUniform3fv(ptlt4color_loc, 1, &pointlight_color[0]);
+	glUniform1f(ptlt4con_loc, pointlight_con[0]);
+	glUniform1f(ptlt4lin_loc, pointlight_con[1]);
+	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
+	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform1f(sptlt0light_con_loc, 0.3f);
+	glUniform1f(sptlt0light_lin_loc, 0.7f);
+	glUniform1f(sptlt0light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_con_loc, 0.3f);
+	glUniform1f(sptlt1light_quad_loc, 0.7f);
+	glUniform1f(sptlt1light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_lin_loc, 0.7f);
+	glUniform1f(sptlt2light_con_loc, 0.3f);
+	glUniform1f(sptlt2light_quad_loc, 0.7f);
+	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
+	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
+	glUniform1f(sptlt0cutoff_loc, cutoff);
+	glUniform1f(sptlt1cutoff_loc, cutoff);
+	glUniform1f(sptlt2cutoff_loc, cutoff);
+
 	glDrawElements(GL_TRIANGLES, cat[2].indices.size(), GL_UNSIGNED_INT, 0);
 
-	//cat3
+	/*//cat3
 	glBindVertexArray(catVAO[3]);
 	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(+2.0f, +0.0f, +1.0f));
 	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.05f, +0.05f, +0.05f));
