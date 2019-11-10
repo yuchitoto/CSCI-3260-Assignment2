@@ -22,5 +22,5 @@ void main()
 	gl_Position = projectedPosition;
 
 	UV = vertexUV;
-	normal = obj_normal;
+	normal = mat3(transpose(inverse(modelTransformMatrix * modelScalingMatrix * modelRotationMatrix))) * obj_normal;
 }
