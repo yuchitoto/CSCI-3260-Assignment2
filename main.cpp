@@ -30,6 +30,8 @@ GLint programID;
 
 //const init
 constexpr float STEP = 0.1f;
+constexpr float CAT_AUTO_STEP = 0.005f;
+constexpr float CAT_AUTO_ROTA = 0.15f;
 
 int current_x, current_y;
 float cam_x, cam_y, cam_z;
@@ -47,6 +49,14 @@ float main_cat_orient = glm::radians(0.0f);
 float main_cat_pos[3] = { +0.0f, -3.5f, +0.0f };
 
 float lightcoefficient = 0.6f;
+
+float moved_disp[2] = {0.0f};
+int movement_type[2] = { 0 };
+//other cat position init
+float cat1pos[2] = { +5.0f, 0.0f };
+float cat2pos[2] = { -5.0f, 0.0f };
+float cat1orient = 0.0f;
+float cat2orient = 0.0f;
 
 //a series utilities for setting shader parameters
 void setMat4(const std::string& name, glm::mat4& value)
@@ -505,25 +515,119 @@ void lightrotation(int direction)
 	light_pos[3][1] = 5.0f * sin(current_light_orient);
 }
 
+//these function should be called using gluttimerfunc of random time and with random movement types as well
+void moving_cat1(int mt)
+{
+	//implement 4 basic movements, forward, backward and 2 rotations
+	switch (mt) {
+	case 0:
+		cat1pos[0] += (cat1pos[0] > -34.0f && cat1pos[0] < +34.0f) ? CAT_AUTO_STEP * sin(glm::radians(cat1orient)) : 0.0f;
+		cat1pos[1] += (cat1pos[1] > -25.0f && cat1pos[1] < +25.0f) ? CAT_AUTO_STEP * cos(glm::radians(cat1orient)) : 0.0f;
+		moved_disp[0] -= CAT_AUTO_STEP;
+		break;
+	case 1:
+		cat1pos[0] -= (cat1pos[0] > -34.0f && cat1pos[0] < +34.0f) ? CAT_AUTO_STEP * sin(glm::radians(cat1orient)) : 0.0f;
+		cat1pos[1] -= (cat1pos[1] > -25.0f && cat1pos[1] < +25.0f) ? CAT_AUTO_STEP * cos(glm::radians(cat1orient)) : 0.0f;
+		moved_disp[0] -= CAT_AUTO_STEP;
+		break;
+	case 2:
+		cat1orient += CAT_AUTO_ROTA;
+		cat1orient = (cat1orient >= 360.0f) ? cat1orient - 360.0f : cat1orient;
+		moved_disp[0] -= CAT_AUTO_ROTA;
+		break;
+	case 3:
+		cat1orient -= CAT_AUTO_ROTA;
+		cat1orient = (cat1orient < 0.0f) ? 360.0f - cat1orient : cat1orient;
+		moved_disp[0] -= CAT_AUTO_ROTA;
+		break;
+	default:
+		moved_disp[0] -= 300;
+	}
+	//additional implementation of jumping action
+}
+
+void moving_cat2(int mt)
+{
+	//implement 4 basic movements, forward, backward and 2 rotations
+	switch (mt) {
+	case 0:
+		cat2pos[0] += (cat2pos[0] > -34.0f && cat2pos[0] < +34.0f) ? CAT_AUTO_STEP * sin(glm::radians(cat2orient)) : 0.0f;
+		cat2pos[1] += (cat2pos[1] > -25.0f && cat2pos[1] < +25.0f) ? CAT_AUTO_STEP * cos(glm::radians(cat2orient)) : 0.0f;
+		moved_disp[1] -= CAT_AUTO_STEP;
+		break;
+	case 1:
+		cat2pos[0] -= (cat2pos[0] > -34.0f && cat2pos[0] < +34.0f) ? CAT_AUTO_STEP * sin(glm::radians(cat2orient)) : 0.0f;
+		cat2pos[1] -= (cat2pos[1] > -25.0f && cat2pos[1] < +25.0f) ? CAT_AUTO_STEP * cos(glm::radians(cat2orient)) : 0.0f;
+		moved_disp[1] -= CAT_AUTO_STEP;
+		break;
+	case 2:
+		cat2orient += CAT_AUTO_ROTA;
+		cat2orient = (cat2orient >= 360.0f) ? cat2orient - 360.0f : cat2orient;
+		moved_disp[1] -= CAT_AUTO_ROTA;
+		break;
+	case 3:
+		cat2orient -= CAT_AUTO_ROTA;
+		cat2orient = (cat2orient < 0.0f) ? 360.0f - cat2orient : cat2orient;
+		moved_disp[1] -= CAT_AUTO_ROTA;
+		break;
+	default:
+		moved_disp[1] -= 300;
+	}
+	//additional implementation of jumping action
+}
+
 void moving_cats(void)
 {
 	srand(time(NULL));
-	glutTimerFunc(300, moving_cat1, rand() % 4);
-	srand(time(NULL)+1);
-	glutTimerFunc(300, moving_cat2, rand() % 4);
-}
-
-//these function should be called using gluttimerfunc of random time and with random movement types as well
-void moving_cat1(int movement_type)
-{
-	//implement 4 basic movements, forward, backward and 2 rotations
-	//additional implementation of jumping action
-}
-
-void moving_cat2(int movement_type)
-{
-	//implement 4 basic movements, forward, backward and 2 rotations
-	//additional implementation of jumping action
+	if (moved_disp[0] <= 0.0f)
+	{
+		movement_type[0] = rand() % 5;
+		switch (movement_type[0]) {
+		case 0:
+			//forward
+			moved_disp[0] = rand() % 10;
+			break;
+		case 1:
+			//backward
+			moved_disp[0] = rand() % 10;
+			break;
+		case 5:
+			moved_disp[0] = rand() % 30000;
+			break;
+		default:
+			moved_disp[0] = rand() % 180;
+		}
+		glutTimerFunc(300, moving_cat1, movement_type[0]);
+	}
+	else
+	{
+		glutTimerFunc(300, moving_cat1, movement_type[0]);
+	}
+	srand(time(NULL) + 1);
+	if (moved_disp[1] <= 0.0f)
+	{
+		movement_type[1] = rand() % 5;
+		switch (movement_type[1]) {
+		case 0:
+			//forward
+			moved_disp[1] = rand() % 10;
+			break;
+		case 1:
+			//backward
+			moved_disp[1] = rand() % 10;
+			break;
+		case 5:
+			moved_disp[1] = rand() % 30000;
+			break;
+		default:
+			moved_disp[1] = rand() % 180;
+		}
+		glutTimerFunc(300, moving_cat2, movement_type[1]);
+	}
+	else
+	{
+		glutTimerFunc(300, moving_cat2, movement_type[1]);
+	}
 }
 
 void paintGL(void)
@@ -545,10 +649,10 @@ void paintGL(void)
 	glm::mat4 modelRotationMatrix = glm::mat4(1.0f);
 	glm::mat4 modelScalingMatrix = glm::mat4(1.0f);
 
-	//other cat position init
-	float cat1pos[2] = { +5.0f, 0.0f };
-	float cat2pos[2] = { -5.0f, 0.0f };
-	float cutoff = glm::radians(30.0f);
+	float cutoff = glm::cos(glm::radians(30.0f));
+
+	//init cat movement
+	moving_cats();
 
 	//light data init
 	glm::vec3 ambient_light_color = glm::vec3(+1.0f, +1.0f, +1.0f);
@@ -575,8 +679,11 @@ void paintGL(void)
 	glm::vec3 specular;
 
 	glm::vec3 main_cat_spotlight_dir = glm::vec3(0.0f, -1.0f, 0.0f);
-	glm::vec3 main_cat_spotlight_pos = glm::vec3(main_cat_pos[0], +1.0f, main_cat_pos[2]);
-	glm::vec3 cat_sl_pos[2] = { glm::vec3(cat1pos[0], +1.3f, cat1pos[1]), glm::vec3(cat2pos[0], +1.3f, cat2pos[1]) };
+	glm::vec3 main_cat_spotlight_pos = glm::vec3(main_cat_pos[0], +1.7f, main_cat_pos[2]);
+	glm::vec3 cat_sl_pos[2];
+	glm::vec3 spotlight_color = 5.0f * glm::vec3(1.0f);
+	cat_sl_pos[0] = glm::vec3(cat1pos[0], +1.7f, cat1pos[1]);
+	cat_sl_pos[1] = glm::vec3(cat2pos[0], +1.7f, cat2pos[1]);
 
 	//floor
 	glBindVertexArray(VAO);
@@ -722,7 +829,7 @@ void paintGL(void)
 	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
 	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
-	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &spotlight_color[0]);
 	glUniform1f(sptlt0light_con_loc, 1.0f);
 	glUniform1f(sptlt0light_lin_loc, 0.7f);
 	glUniform1f(sptlt0light_quad_loc, 0.5f);
@@ -734,8 +841,8 @@ void paintGL(void)
 	glUniform1f(sptlt2light_quad_loc, 0.5f);
 	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
-	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
-	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &spotlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &spotlight_color[0]);
 	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
 	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
 	glUniform1f(sptlt0cutoff_loc, cutoff);
@@ -760,7 +867,7 @@ void paintGL(void)
 
 	//init material coefficient
 	shininess = 4.0f;
-	ambient = glm::vec3(0.7f);
+	ambient = glm::vec3(0.3f);
 	diffuse = glm::vec3(1.0f);
 	specular = glm::vec3(0.5f);
 
@@ -809,7 +916,7 @@ void paintGL(void)
 	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
 	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
-	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &spotlight_color[0]);
 	glUniform1f(sptlt0light_con_loc, 1.0f);
 	glUniform1f(sptlt0light_lin_loc, 0.7f);
 	glUniform1f(sptlt0light_quad_loc, 0.5f);
@@ -821,8 +928,8 @@ void paintGL(void)
 	glUniform1f(sptlt2light_quad_loc, 0.5f);
 	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
-	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
-	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &spotlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &spotlight_color[0]);
 	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
 	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
 	glUniform1f(sptlt0cutoff_loc, cutoff);
@@ -839,7 +946,7 @@ void paintGL(void)
 	glBindVertexArray(catVAO[1]);
 	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(cat1pos[0], -3.5f, cat1pos[1]));
 	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.15f, +0.15f, +0.15f));
-	modelRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(-1.0f, +0.0f, +0.0f));
+	modelRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(cat1orient), glm::vec3(+0.0f, +1.0f, +0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(-1.0f, +0.0f, +0.0f));
 	glUniformMatrix4fv(modelTransformMatrixUniformLocation, 1, GL_FALSE, &modelTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelRotateMatrixUniformLocation, 1, GL_FALSE, &modelRotationMatrix[0][0]);
 	glUniformMatrix4fv(modelScalingMatrixUniformLocation, 1, GL_FALSE, &modelScalingMatrix[0][0]);
@@ -890,7 +997,7 @@ void paintGL(void)
 	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
 	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
-	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &spotlight_color[0]);
 	glUniform1f(sptlt0light_con_loc, 1.0f);
 	glUniform1f(sptlt0light_lin_loc, 0.7f);
 	glUniform1f(sptlt0light_quad_loc, 0.5f);
@@ -902,8 +1009,8 @@ void paintGL(void)
 	glUniform1f(sptlt2light_quad_loc, 0.5f);
 	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
-	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
-	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &spotlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &spotlight_color[0]);
 	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
 	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
 	glUniform1f(sptlt0cutoff_loc, cutoff);
@@ -919,7 +1026,7 @@ void paintGL(void)
 	glBindVertexArray(catVAO[2]);
 	modelTransformMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(cat2pos[0], -3.5f, cat2pos[1]));
 	modelScalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(+0.15f, +0.15f, +0.15f));
-	modelRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(-1.0f, +0.0f, +0.0f));
+	modelRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(cat2orient), glm::vec3(0.0f, +1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(-1.0f, +0.0f, +0.0f));
 	glUniformMatrix4fv(modelTransformMatrixUniformLocation, 1, GL_FALSE, &modelTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelRotateMatrixUniformLocation, 1, GL_FALSE, &modelRotationMatrix[0][0]);
 	glUniformMatrix4fv(modelScalingMatrixUniformLocation, 1, GL_FALSE, &modelScalingMatrix[0][0]);
@@ -970,7 +1077,7 @@ void paintGL(void)
 	glUniform1f(ptlt4quad_loc, pointlight_con[2]);
 	glUniform3fv(sptlt0dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt0light_pos_loc, 1, &main_cat_spotlight_pos[0]);
-	glUniform3fv(sptlt0light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt0light_color_loc, 1, &spotlight_color[0]);
 	glUniform1f(sptlt0light_con_loc, 1.0f);
 	glUniform1f(sptlt0light_lin_loc, 0.7f);
 	glUniform1f(sptlt0light_quad_loc, 0.5f);
@@ -982,8 +1089,8 @@ void paintGL(void)
 	glUniform1f(sptlt2light_quad_loc, 0.5f);
 	glUniform3fv(sptlt1dir_loc, 1, &main_cat_spotlight_dir[0]);
 	glUniform3fv(sptlt2dir_loc, 1, &main_cat_spotlight_dir[0]);
-	glUniform3fv(sptlt1light_color_loc, 1, &pointlight_color[0]);
-	glUniform3fv(sptlt2light_color_loc, 1, &pointlight_color[0]);
+	glUniform3fv(sptlt1light_color_loc, 1, &spotlight_color[0]);
+	glUniform3fv(sptlt2light_color_loc, 1, &spotlight_color[0]);
 	glUniform3fv(sptlt1light_pos_loc, 1, &cat_sl_pos[0][0]);
 	glUniform3fv(sptlt2light_pos_loc, 1, &cat_sl_pos[1][0]);
 	glUniform1f(sptlt0cutoff_loc, cutoff);
