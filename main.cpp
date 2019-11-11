@@ -503,16 +503,16 @@ void sendDataToOpenGL()
 
 void lightrotation(int direction)
 {
-	current_light_orient += 4.5f * direction;
+	current_light_orient += 0.3f * direction;
 	current_light_orient = (current_light_orient >= 360.0f) ? current_light_orient - 360.0f : current_light_orient;
-	light_pos[0][0] = 5.0f * cos(current_light_orient);
-	light_pos[0][1] = 5.0f * sin(current_light_orient);
-	light_pos[1][0] = 5.0f * cos(current_light_orient);
-	light_pos[1][1] = -5.0f * sin(current_light_orient);
-	light_pos[2][0] = -5.0f * cos(current_light_orient);
-	light_pos[2][1] = -5.0f * sin(current_light_orient);
-	light_pos[3][0] = -5.0f * cos(current_light_orient);
-	light_pos[3][1] = 5.0f * sin(current_light_orient);
+	light_pos[0][0] = 5.0f * cos(glm::radians(current_light_orient));
+	light_pos[0][1] = 5.0f * sin(glm::radians(current_light_orient));
+	light_pos[1][0] = 5.0f * sin(glm::radians(current_light_orient));
+	light_pos[1][1] = -5.0f * cos(glm::radians(current_light_orient));
+	light_pos[2][0] = -5.0f * cos(glm::radians(current_light_orient));
+	light_pos[2][1] = -5.0f * sin(glm::radians(current_light_orient));
+	light_pos[3][0] = -5.0f * sin(glm::radians(current_light_orient));
+	light_pos[3][1] = 5.0f * cos(glm::radians(current_light_orient));
 }
 
 //these function should be called using gluttimerfunc of random time and with random movement types as well
@@ -659,11 +659,11 @@ void paintGL(void)
 	glm::vec3 dirlgt = lightcoefficient * glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec3 dirlgtdir = glm::vec3(0.0f, -1.0f, 0.0f);
 	glm::vec3 pointlight_pos[6];
-	pointlight_pos[0] = glm::vec3(+7.0f, +1.0f, +7.0f);
-	pointlight_pos[1] = glm::vec3(-7.0f, +1.0f, -7.0f);
+	pointlight_pos[0] = glm::vec3(+10.0f, +1.0f, +10.0f);
+	pointlight_pos[1] = glm::vec3(-10.0f, +1.0f, -10.0f);
 
 	if(rotaion_bool)
-		glutTimerFunc(3000, lightrotation, 1);
+		glutTimerFunc(300, lightrotation, 1);
 	for (int k = 0; k < 4; k++)
 	{
 		pointlight_pos[k + 2] = glm::vec3(light_pos[k][0], +1.0f, light_pos[k][1]);
