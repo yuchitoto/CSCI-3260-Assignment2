@@ -26,9 +26,9 @@ struct SpotLight {
 	float cutoff;
 };
 
-in vec2 UV;
-in vec3 normal;
-in vec3 FragPos;
+in layout(location=0) vec2 UV;
+in layout(location=1) vec3 normal;
+in layout(location=2) vec3 FragPos;
 
 uniform vec3 viewPos;
 uniform vec3 light_amb;
